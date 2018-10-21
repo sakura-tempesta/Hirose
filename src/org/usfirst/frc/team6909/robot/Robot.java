@@ -13,13 +13,7 @@ import edu.wpi.first.wpilibj.PWMTalonSRX;
 import edu.wpi.first.wpilibj.XboxController;
 
 
-/**
- * The VM is configured to automatically run this class, and to call the
- * functions corresponding to each mode, as described in the TimedRobot
- * documentation. If you change the name of this class or the package after
- * creating this project, you must also update the build.properties file in the
- * project.
- */
+
 public class Robot extends IterativeRobot {
 	private XboxController driver;
 	private PWMTalonSRX m_leftArm,m_rightArm;
@@ -33,6 +27,7 @@ public class Robot extends IterativeRobot {
 
 	public void teleopPeriodic() {
 		double value =driver.getY(Hand.kLeft);
+		if(value>-0.2&&value<0.2) value=0;
 
 		m_leftArm.set(value);
 		m_rightArm.set(-value);
