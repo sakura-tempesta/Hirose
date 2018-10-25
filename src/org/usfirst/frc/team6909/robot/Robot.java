@@ -15,19 +15,22 @@ import edu.wpi.first.wpilibj.XboxController;
 
 
 public class Robot extends IterativeRobot {
+
 	private XboxController driver;
-	private PWMTalonSRX m_leftArm,m_rightArm;
+	private PWMTalonSRX m_leftArm, m_rightArm;
 
-	Robot(){
-		driver=new XboxController(0);
+	Robot() {
+		driver = new XboxController(0);
 
-		m_leftArm=new PWMTalonSRX(5);
-		m_rightArm=new PWMTalonSRX(6);
+		m_leftArm = new PWMTalonSRX(5);
+		m_rightArm = new PWMTalonSRX(6);
 	}
 
 	public void teleopPeriodic() {
-		double value =driver.getY(Hand.kLeft);
-		if(value>-0.2&&value<0.2) value=0;
+		double value = driver.getY(Hand.kLeft);
+		if( -0.2 < value && value < 0.2 ) {
+			value=0;
+		}
 
 		m_leftArm.set(value);
 		m_rightArm.set(-value);
