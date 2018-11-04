@@ -24,6 +24,7 @@ public class Robot extends IterativeRobot {
 
 		m_leftArm = new PWMTalonSRX(5);
 		m_rightArm = new PWMTalonSRX(6);
+
 	}
 
 	public void teleopPeriodic() {
@@ -32,8 +33,20 @@ public class Robot extends IterativeRobot {
 			value=0;
 		}
 
+
+		boolean leftTrigger = 0 < driver.getTriggerAxis(Hand.kLeft),
+				 rightTrigger =  0 < driver.getTriggerAxis(Hand.kRight);
+
+		if( leftTrigger && rightTrigger ) {
+			value=0;
+		}else {
+			value = leftTrigger ? 1.0 : 0;
+			value = rightTrigger ? -1.0 : 0;
+		}
+
 		m_leftArm.set(value);
 		m_rightArm.set(-value);
+
 	}
 
 }
