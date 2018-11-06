@@ -28,20 +28,17 @@ public class Robot extends IterativeRobot {
 	}
 
 	public void teleopPeriodic() {
-		double value = driver.getY(Hand.kLeft);
-		if( -0.2 < value && value < 0.2 ) {
-			value=0;
-		}
 
 
-		boolean leftTrigger = 0 < driver.getTriggerAxis(Hand.kLeft),
-				 rightTrigger =  0 < driver.getTriggerAxis(Hand.kRight);
 
-		if( leftTrigger && rightTrigger ) {
-			value=0;
+		boolean is_leftTriggerOn = 0.2 < driver.getTriggerAxis(Hand.kLeft),
+				 is_rightTriggerOn =  0.2 < driver.getTriggerAxis(Hand.kRight);
+
+		if( is_leftTriggerOn && is_rightTriggerOn ) {
+			value = 0;
 		}else {
-			value = leftTrigger ? 1.0 : 0;
-			value = rightTrigger ? -1.0 : 0;
+			value = is_leftTriggerOn ? 1.0 : 0;
+			value = is_rightTriggerOn ? -1.0 : 0;
 		}
 
 		m_leftArm.set(value);
