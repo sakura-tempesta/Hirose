@@ -29,7 +29,7 @@ public class Robot extends IterativeRobot {
 
 	public void teleopPeriodic() {
 
-
+		double value=0;
 
 		boolean is_leftTriggerOn = 0.2 < driver.getTriggerAxis(Hand.kLeft),
 				 is_rightTriggerOn =  0.2 < driver.getTriggerAxis(Hand.kRight);
