@@ -7,6 +7,7 @@
 
 package org.usfirst.frc.team6909.robot;
 
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.PWMTalonSRX;
@@ -14,6 +15,7 @@ import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 
 
@@ -25,6 +27,24 @@ public class Robot extends IterativeRobot {
 				  ,m_leftFront,m_leftRear;
 	private SpeedControllerGroup m_left, m_right;
 	private DifferentialDrive drive;
+
+	private Encoder e_driveEncoder;
+	private EncoderOriginal e_liftEncoder;
+
+	double armvalue = 0;
+	boolean is_leftTriggerOn, is_rightTriggerOn;
+	double X_driver, Y_driver;
+
+	double NoReact = 0.1;
+	double disabledPeriodicCounter = 0;
+
+	private double dataProcessing(double value) {
+
+		value *= Math.abs(value) > NoReact ? 1 : 0 ;
+
+		return value;
+	}; //不感帯未満なら0
+
 
 	Robot() {
 		driver = new XboxController(0);
@@ -39,31 +59,86 @@ public class Robot extends IterativeRobot {
 		m_left = new SpeedControllerGroup(m_leftFront, m_leftRear);
 		m_right = new SpeedControllerGroup(m_rightFront, m_rightRear);
 		drive = new DifferentialDrive(m_left, m_right);
+
+		e_driveEncoder = new Encoder(8, 9);
+		e_driveEncoder.setDistancePerPulse(7.7 * Math.PI / 10.71);
+		e_liftEncoder = new EncoderOriginal(4,5);
+		e_liftEncoder.setDistancePerPulse(2);
+
+		e_driveEncoder.reset();
+		e_driveEncoder.reset();
+	}
+
+	public void autonomousPeriodic() {
+		boolean is_driveEncoderOver = e_driveEncoder.getDistance() > 1000;
+		if(is_driveEncoderOver) {
+			e_driveEncoder.reset();
+		}
+
+		if(driver.getAButton() && !is_driveEncoderOver) {
+			drive.arcadeDrive(1.0, 0);
+		}else {
+			drive.arcadeDrive(0, 0);
+		}
 	}
 
 	public void teleopPeriodic() {
 
-		double value = 0;
 
-		boolean is_leftTriggerOn = 0.2 < driver.getTriggerAxis(Hand.kLeft),
-				 is_rightTriggerOn =  0.2 < driver.getTriggerAxis(Hand.kRight);
+
+		is_leftTriggerOn = 0.2 < driver.getTriggerAxis(Hand.kLeft);
+		is_rightTriggerOn =  0.2 < driver.getTriggerAxis(Hand.kRight);
 
 		if( is_leftTriggerOn && is_rightTriggerOn ) {
-			value = 0;
+			armvalue = 0;
 		}else {
-			value = is_leftTriggerOn ? 1.0 : 0;
-			value = is_rightTriggerOn ? -1.0 : 0;
+			armvalue = is_leftTriggerOn ? 1.0 : 0;
+			armvalue = is_rightTriggerOn ? -1.0 : 0;
 		}
 
-		m_leftArm.set(value);
-		m_rightArm.set(-value);
+		X_driver = dataProcessing(driver.getY(Hand.kLeft));
+		X_driver = dataProcessing(driver.getX(Hand.kRight));
 
-		//不感帯
-		if( Math.abs(driver.getY(Hand.kLeft)) > 0.2 || Math.abs(driver.getX(Hand.kRight)) >0.2 ) {
-			drive.arcadeDrive(driver.getY(Hand.kLeft), driver.getX(Hand.kRight) );
-		} else {
-			drive.arcadeDrive(0.0, 0.0);
-		}
+
+		m_leftArm.set(armvalue);
+		m_rightArm.set(-armvalue);
+
+		drive.arcadeDrive(Y_driver, X_driver);
+
+
+
+
+	}
+
+	public void disabledPeriodic() {
+
+		disabledPeriodicCounter++;
+
+		SmartDashboard.putNumber("driverの左のY", driver.getY(Hand.kLeft));
+		SmartDashboard.putBoolean("driverのAが押されてるか", driver.getAButton());
+		SmartDashboard.putNumber("呼ばれた回数", disabledPeriodicCounter);
+
 	}
 
 }
+
+
+class EncoderOriginal extends Encoder{
+
+
+	public EncoderOriginal(int channelA, int channelB) {
+		super(channelA, channelB);
+	}
+
+	public double getDistance(){
+		double distace = super.getDistance();
+
+		//ここで処理
+
+		return distace;
+	}
+}
+
+
+
+
