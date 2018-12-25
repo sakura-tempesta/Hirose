@@ -29,16 +29,19 @@ public class Robot extends IterativeRobot {
 	private DifferentialDrive drive;
 
 	private Encoder e_driveEncoder;
-	private EncoderOriginal e_liftEncoder;
+	private LiftEncoder e_liftEncoder;
 
 	double armvalue = 0;
 	boolean is_leftTriggerOn, is_rightTriggerOn;
 	double X_driver, Y_driver;
 
 	double NoReact = 0.1;
-	double disabledPeriodicCounter = 0;
 
-	private double dataProcessing(double value) {
+	int disabledPeriodicCounter = 0;
+	double nowValue_driveEncoder, firstValue_driveEncoder;
+	boolean is_driveEncoderOver, advancingOnemeterInit;
+
+	private double NoReactProcessing(double value) {
 
 		value *= Math.abs(value) > NoReact ? 1 : 0 ;
 
@@ -62,25 +65,13 @@ public class Robot extends IterativeRobot {
 
 		e_driveEncoder = new Encoder(8, 9);
 		e_driveEncoder.setDistancePerPulse(7.7 * Math.PI / 10.71);
-		e_liftEncoder = new EncoderOriginal(4,5);
+		e_liftEncoder = new LiftEncoder(4,5);
 		e_liftEncoder.setDistancePerPulse(2);
 
 		e_driveEncoder.reset();
 		e_driveEncoder.reset();
 	}
 
-	public void autonomousPeriodic() {
-		boolean is_driveEncoderOver = e_driveEncoder.getDistance() > 1000;
-		if(is_driveEncoderOver) {
-			e_driveEncoder.reset();
-		}
-
-		if(driver.getAButton() && !is_driveEncoderOver) {
-			drive.arcadeDrive(1.0, 0);
-		}else {
-			drive.arcadeDrive(0, 0);
-		}
-	}
 
 	public void teleopPeriodic() {
 
@@ -96,16 +87,36 @@ public class Robot extends IterativeRobot {
 			armvalue = is_rightTriggerOn ? -1.0 : 0;
 		}
 
-		X_driver = dataProcessing(driver.getY(Hand.kLeft));
-		X_driver = dataProcessing(driver.getX(Hand.kRight));
-
+		X_driver = NoReactProcessing(driver.getY(Hand.kLeft));
+		X_driver = NoReactProcessing(driver.getX(Hand.kRight));
 
 		m_leftArm.set(armvalue);
 		m_rightArm.set(-armvalue);
 
-		drive.arcadeDrive(Y_driver, X_driver);
 
+		if(driver.getAButton()) {
 
+			if(!advancingOnemeterInit) {
+				firstValue_driveEncoder = e_driveEncoder.getDistance();
+				advancingOnemeterInit = true;
+			}//初期化
+
+			nowValue_driveEncoder = e_driveEncoder.getDistance() - firstValue_driveEncoder;
+			is_driveEncoderOver	= nowValue_driveEncoder > 1000;
+
+			if(is_driveEncoderOver) {
+				advancingOnemeterInit = false;
+				drive.arcadeDrive(0, 0);
+			}else {
+				drive.arcadeDrive(1.0, 0);
+			}
+
+		}else {
+			advancingOnemeterInit= false;
+
+			drive.arcadeDrive(Y_driver, X_driver);
+
+		}
 
 
 	}
@@ -123,10 +134,10 @@ public class Robot extends IterativeRobot {
 }
 
 
-class EncoderOriginal extends Encoder{
+class LiftEncoder extends Encoder{
 
 
-	public EncoderOriginal(int channelA, int channelB) {
+	public LiftEncoder(int channelA, int channelB) {
 		super(channelA, channelB);
 	}
 
