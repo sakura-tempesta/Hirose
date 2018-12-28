@@ -7,6 +7,7 @@
 
 package org.usfirst.frc.team6909.robot;
 
+import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj.IterativeRobot;
@@ -25,12 +26,12 @@ public class Robot extends IterativeRobot {
 	private Spark m_rightFront, m_rightRear
 				  ,m_leftFront,m_leftRear;
 	private SpeedControllerGroup m_left, m_right;
-	private  DrivePIDController DrivePID;
+	private  DrivePIDController drivePID;
 
 	private Encoder e_driveleft;
 	private DriveEncoderGroup e_drive;
 	private LiftEncoder e_liftEncoder;
-	private DriveGyro Gyro;
+	private ADXRS450_Gyro Gyro;
 
 
 	private double armvalue = 0;
@@ -38,12 +39,9 @@ public class Robot extends IterativeRobot {
 	private double X_driver, Y_driver;
 
 
-
 	private double NoReact = 0.1;
 
 	private int disabledPeriodicCounter = 0;
-	private double nowValue_driveEncoder, firstValue_driveEncoder;
-	private boolean is_driveEncoderOver, advancingOnemeterInit;
 
 	private double NoReactProcessing(double value) {
 
@@ -65,19 +63,19 @@ public class Robot extends IterativeRobot {
 		m_rightRear = new Spark(3);
 		m_left = new SpeedControllerGroup(m_leftFront, m_leftRear);
 		m_right = new SpeedControllerGroup(m_rightFront, m_rightRear);
-		DrivePID = new DrivePIDController(m_left, m_right);
+		drivePID = new DrivePIDController(m_left, m_right,e_drive, Gyro);
 
 		e_driveleft = new Encoder(8, 9);
 		e_drive = new DriveEncoderGroup(e_driveleft);
 		e_drive.setDistancePerPulse(7.7 * Math.PI / 10.71);
 		e_liftEncoder = new LiftEncoder(4,5);
 		e_liftEncoder.setDistancePerPulse(2);
-		Gyro = new DriveGyro();
+		Gyro = new ADXRS450_Gyro();
 
 		e_drive.reset();
 		e_liftEncoder.reset();
 
-		DrivePID = new DrivePIDController(m_left, m_right,e_drive, Gyro);
+
 	}
 
 
@@ -103,29 +101,15 @@ public class Robot extends IterativeRobot {
 
 
 		if(driver.getAButton()) {
-
-			if(!advancingOnemeterInit) {
-				firstValue_driveEncoder = e_drive.getDistance();
-				advancingOnemeterInit = true;
-			}//初期化
-
-			nowValue_driveEncoder = e_drive.getDistance() - firstValue_driveEncoder;
-			is_driveEncoderOver	= nowValue_driveEncoder > 1000;
-
-			if(is_driveEncoderOver) {
-				advancingOnemeterInit = false;
-				DrivePID.arcadeDrive(0, 0);
-			}else {
-				DrivePID.arcadeDrive(1.0, 0);
+			if(!drivePID.is_PIDEnabled()) {
+				drivePID.setRelativeStraightSetpoint(1000);
+				drivePID.PIDenable();;
 			}
-
 		}else {
-			advancingOnemeterInit= false;
-
-			DrivePID.arcadeDrive(Y_driver, X_driver);
+			drivePID.PIDdisable();;
+			drivePID.arcadeDrive(Y_driver, X_driver);
 
 		}
-
 
 	}
 
@@ -155,7 +139,9 @@ class LiftEncoder extends Encoder{
 		//ここで処理
 
 		return distace;
+
 	}
+
 }
 
 

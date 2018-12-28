@@ -9,35 +9,92 @@ import edu.wpi.first.wpilibj.PIDSourceType;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 
-enum PIDMode{Straight, Rotate,Default};
 
 public class DrivePIDController extends DifferentialDrive{
 
-	public DrivePIDController(SpeedController leftMotor, SpeedController rightMotor) {
+	enum PIDMode{Straight, Rotate,Default};
+
+	private double straightOutput, rotateOutput;
+
+	private DriveEncoderGroup e_drive;
+	private ADXRS450_Gyro g_drive;
+
+	private PIDController driveStraightController, driveRotateController;
+
+
+	public DrivePIDController(SpeedController leftMotor, SpeedController rightMotor, DriveEncoderGroup e_drive, ADXRS450_Gyro g_drive) {
 		super(leftMotor, rightMotor);
-		// TODO 自動生成されたコンストラクター・スタブ
+		this.e_drive = e_drive;
+		this.g_drive = g_drive;
+
+		driveStraightController = new PIDController(Const.kp_straight, Const.ki_straight, Const.kd_straight, e_drive, new DrivePIDOutput(PIDMode.Straight));
+		driveRotateController = new PIDController(Const.kp_rotate, Const.ki_rotate, Const.kd_rotate, g_drive, new DrivePIDOutput(PIDMode.Rotate));
 	}
 
-	public DrivePIDController(SpeedController leftMotor, SpeedController rightMotor, DriveEncoderGroup e_drive, DriveGyro g_drive) {
-		this(leftMotor, rightMotor);
+	/* 本来のsetSetPointでは現在位置からではなくEncoder系を作動させた時の初期位置からの距離、角度を指定する必要がある。
+	 * PIDControllerのcalculate()をみるとinputにpidGet()をいれ、setSetpoint()でsetされた目標値との偏差をとっている。
+	 * つまり、何も考えずに入れるとEncoder系を作動させた時の初期位置からのsetpointになり、思うように動作しない。
+	 * 例えば、1ｍ前進した後に2ｍ後進しようとしてsetSetpoint(-2000)などとすると実際には3ｍ後進してしまう。
+	 * だから、setSetpoint(getDistance()(=1000) + setpoint(=-2000))とする。
+	 * しかし、少し扱いづらいので"Relative"(=相対)にして見えないところで処理する。
+	 */
+	public void setRelativeStraightSetpoint(double setpoint) {
+		driveStraightController.setSetpoint(e_drive.getDistance() + setpoint);
+		driveRotateController.setSetpoint(g_drive.getAngle());
 
-		DriveStraightController = new PIDController(Const.kp, Const.ki, Const.kd,e_drive, new DrivePIDOutput(PIDMode.Straight));
-		DriveRotateController = new PIDController(Const.kp, Const.ki, Const.kd,g_drive, new DrivePIDOutput(PIDMode.Rotate));
 	}
 
-
-
-	protected static double straightOutput;
-	protected static double rotateOutput;
-
-	private PIDController DriveStraightController, DriveRotateController;
-
-	public void setSetpoint(double setpoint) {
-		DriveStraightController.setSetpoint(setpoint);
-		DriveRotateController.setSetpoint(0);
-
-		arcadeDrive(straightOutput, rotateOutput);
+	public void PIDenable() {
+		if(!driveStraightController.isEnabled()) {
+			driveStraightController.enable();
+		}
+		if(!driveRotateController.isEnabled()) {
+			driveRotateController.enable();
+		}
 	}
+
+	public void PIDdisable() {
+		if(driveStraightController.isEnabled()) {
+			driveStraightController.disable();
+		}
+		if(driveRotateController.isEnabled()) {
+			driveRotateController.disable();
+		}
+	}
+
+	public boolean is_PIDEnabled() {
+		return driveStraightController.isEnabled() && driveRotateController.isEnabled();
+	}
+
+	class DrivePIDOutput implements PIDOutput{
+
+		PIDMode m_pid = PIDMode.Default;
+
+		DrivePIDOutput(PIDMode m_pid){
+			this.m_pid = m_pid;
+		}
+
+
+		public void pidWrite(double output) {
+
+			switch(m_pid) {
+			case Straight:
+				straightOutput = output;
+				break;
+
+			case Rotate:
+				rotateOutput = output;
+				break;
+
+			case Default:
+			default:
+			}
+
+			arcadeDrive(straightOutput,rotateOutput);
+
+		}
+	}
+
 
 }
 
@@ -70,8 +127,6 @@ class DriveEncoderGroup implements PIDSource{
 	}
 
 
-
-
 	@Override
 	public void setPIDSourceType(PIDSourceType pidSource) {
 		// TODO 自動生成されたメソッド・スタブ
@@ -88,42 +143,8 @@ class DriveEncoderGroup implements PIDSource{
 	public double pidGet() {
 		// TODO 自動生成されたメソッド・スタブ
 		return getDistance();	}
-}
 
-class DriveGyro extends ADXRS450_Gyro {
-	@Override
-	public double pidGet() {
-
-		return this.getAngle();
-	}
-
-}
-
-class DrivePIDOutput implements PIDOutput{
+	}//他のところでもEncoderGroupは使うので外に置く。DriveTrainにはアクセスしないので問題はない。
 
 
-	DrivePIDOutput(PIDMode m_pid){
-		this.m_pid = m_pid;
-	}
 
-
-	PIDMode m_pid = PIDMode.Default;
-
-
-	public void pidWrite(double output) {
-
-		switch(m_pid) {
-		case Straight:
-			DrivePIDController.straightOutput = output;
-			break;
-
-		case Rotate:
-			DrivePIDController.rotateOutput = output;
-			break;
-
-		case Default:
-		default:
-		}
-
-	}
-}
